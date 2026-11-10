@@ -38,9 +38,7 @@ export interface DotaPatchDetail {
  */
 export async function getOfficialPatchList(): Promise<DotaPatchSummary[]> {
   try {
-    const res = await fetch('https://www.dota2.com/datafeed/patchnoteslist', {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
+    const res = await fetch('https://www.dota2.com/datafeed/patchnoteslist');
     if (!res.ok) throw new Error(`Valve API returned status ${res.status}`);
     const data = await res.json();
     if (data.success && Array.isArray(data.patches)) {
@@ -59,9 +57,7 @@ export async function getOfficialPatchList(): Promise<DotaPatchSummary[]> {
  */
 export async function getOfficialPatchDetails(version: string): Promise<DotaPatchDetail | null> {
   try {
-    const res = await fetch(`https://www.dota2.com/datafeed/patchnotes?version=${encodeURIComponent(version)}`, {
-      next: { revalidate: 86400 }, // Cache patch notes for 24 hours
-    });
+    const res = await fetch(`https://www.dota2.com/datafeed/patchnotes?version=${encodeURIComponent(version)}`);
     if (!res.ok) throw new Error(`Valve API returned status ${res.status}`);
     const data = await res.json();
     if (data.success) {

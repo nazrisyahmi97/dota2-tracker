@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getOfficialPatchList } from '@/lib/dota';
 import { getServiceSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST() {
   try {
     if (!isSupabaseConfigured()) {
