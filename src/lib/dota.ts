@@ -17,20 +17,23 @@ export interface DotaPatchDetail {
       ability_id: number;
       ability_notes?: Array<{ note: string; aghanims?: string }>;
     }>;
-    subsections?: Array<{
-      title: string;
-      style?: string;
-      facet?: string;
-      abilities?: Array<{
-        ability_id: number;
-        ability_notes?: Array<{ note: string }>;
-      }>;
-    }>;
   }>;
-  items?: Array<{
-    ability_id: number;
-    ability_notes?: Array<{ note: string }>;
-  }>;
+}
+
+export interface DotaHeroStats {
+  id: number;
+  name: string;
+  localized_name: string;
+  primary_attr: string;
+  roles: string[];
+  img: string;
+  icon: string;
+  pub_pick: number;
+  pub_win: number;
+  pro_pick?: number;
+  pro_win?: number;
+  winrate: number;
+  dotabuff_url: string;
 }
 
 /**
@@ -53,19 +56,49 @@ export async function getOfficialPatchList(): Promise<DotaPatchSummary[]> {
 }
 
 /**
- * Fetch detailed notes for a specific patch version (e.g. "7.37e")
+ * Fetch top picked heroes with stats and Dotabuff links from OpenDota API
  */
-export async function getOfficialPatchDetails(version: string): Promise<DotaPatchDetail | null> {
+export async function getTopPickedHeroes(limit = 10): Promise<DotaHeroStats[]> {
   try {
-    const res = await fetch(`https://www.dota2.com/datafeed/patchnotes?version=${encodeURIComponent(version)}`);
-    if (!res.ok) throw new Error(`Valve API returned status ${res.status}`);
+    const res = await fetch('https://api.opendota.com/api/heroStats');
+    if (!res.ok) throw new Error(`OpenDota API returned status ${res.status}`);
     const data = await res.json();
-    if (data.success) {
-      return data;
-    }
-    return null;
+
+    if (!Array.isArray(data)) return [];
+
+    const heroes: DotaHeroStats[] = data
+      .filter((h) => h.pub_pick > 0)
+      .map((h) => {
+        // e.g. "npc_dota_hero_anti_mage" -> "anti-mage"
+        const slug = h.name
+          .replace('npc_dota_hero_', '')
+          .replace(/_/g, '-');
+
+        const winrate = h.pub_pick > 0 ? Number(((h.pub_win / h.pub_pick) * 100).toFixed(1)) : 0;
+
+        return {
+          id: h.id,
+          name: h.name,
+          localized_name: h.localized_name,
+          primary_attr: h.primary_attr,
+          roles: h.roles || [],
+          img: h.img ? `https://cdn.cloudflare.steamstatic.com${h.img}` : '',
+          icon: h.icon ? `https://cdn.cloudflare.steamstatic.com${h.icon}` : '',
+          pub_pick: h.pub_pick,
+          pub_win: h.pub_win,
+          pro_pick: h.pro_pick,
+          pro_win: h.pro_win,
+          winrate,
+          dotabuff_url: `https://www.dotabuff.com/heroes/${slug}`,
+        };
+      })
+      // Sort descending by total picks in current meta
+      .sort((a, b) => b.pub_pick - a.pub_pick)
+      .slice(0, limit);
+
+    return heroes;
   } catch (error) {
-    console.error(`Error fetching patch notes for ${version}:`, error);
-    return null;
+    console.error('Error fetching hero stats:', error);
+    return [];
   }
 }

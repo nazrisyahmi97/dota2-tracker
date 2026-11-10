@@ -1,7 +1,8 @@
-import { getOfficialPatchList, DotaPatchSummary } from '@/lib/dota';
+import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/lib/dota';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
-import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database } from 'lucide-react';
+import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +34,11 @@ export default async function Home() {
     source = 'Valve Live Feed';
   }
 
+  // 3. Fetch top picked heroes from current meta (backed by official match data)
+  const topHeroes = await getTopPickedHeroes(8);
+
   const latestPatch = patches[0] || null;
-  const recentPatches = patches.slice(1, 13);
+  const recentPatches = patches.slice(1, 9);
 
   return (
     <div className="min-h-screen bg-[#0e1015] text-[#e1e6eb] font-sans">
@@ -49,7 +53,7 @@ export default async function Home() {
               <span className="font-black text-lg tracking-wider uppercase bg-gradient-to-r from-red-400 via-amber-200 to-red-500 bg-clip-text text-transparent">
                 Aegis Update
               </span>
-              <span className="text-xs text-red-400/80 font-mono block -mt-1">Dota 2 Changelog Tracker</span>
+              <span className="text-xs text-red-400/80 font-mono block -mt-1">Dota 2 Changelog & Meta Tracker</span>
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -61,8 +65,8 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* Hero Section: Latest Patch */}
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+      {/* Main Container */}
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-12">
         {/* Supabase Action Bar */}
         <div className="p-4 rounded-xl border border-zinc-800 bg-[#14161f]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-0.5">
@@ -76,6 +80,7 @@ export default async function Home() {
           <SyncButton />
         </div>
 
+        {/* Hero Section: Latest Patch */}
         {latestPatch ? (
           <section className="relative overflow-hidden rounded-2xl border border-red-900/40 bg-gradient-to-b from-[#1c1820] to-[#12141a] p-8 shadow-2xl shadow-red-950/20">
             <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -118,6 +123,116 @@ export default async function Home() {
             <RefreshCw className="w-8 h-8 text-zinc-500 animate-spin mx-auto mb-3" />
             <p className="text-zinc-400">Loading Dota 2 patch list...</p>
           </div>
+        )}
+
+        {/* Top Picked Heroes in Current Patch (Dotabuff linked) */}
+        {topHeroes.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                  Top Picked Heroes
+                  {latestPatch && (
+                    <span className="text-sm font-normal text-zinc-400">
+                      (Patch {latestPatch.patch_name} Meta)
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-zinc-400 mt-1">
+                  Most popular heroes in public matchmaking with direct links to full Dotabuff analysis.
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-md self-start sm:self-auto">
+                <Swords className="w-3.5 h-3.5 text-red-400" />
+                Real-time Match Stats
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {topHeroes.map((hero, index) => {
+                const isHighWinrate = hero.winrate >= 50;
+                const formattedPicks = hero.pub_pick >= 1000000 
+                  ? `${(hero.pub_pick / 1000000).toFixed(1)}M` 
+                  : `${(hero.pub_pick / 1000).toFixed(0)}K`;
+
+                const attrColor = 
+                  hero.primary_attr === 'str' ? 'border-red-500/50 text-red-400' :
+                  hero.primary_attr === 'agi' ? 'border-emerald-500/50 text-emerald-400' :
+                  hero.primary_attr === 'int' ? 'border-sky-500/50 text-sky-400' :
+                  'border-amber-500/50 text-amber-400';
+
+                return (
+                  <div
+                    key={hero.id}
+                    className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800 bg-[#14161f]/80 hover:border-red-700/60 transition duration-300 shadow-lg"
+                  >
+                    {/* Top Image Banner with Rank Badge */}
+                    <div className="relative w-full h-32 bg-zinc-950 overflow-hidden">
+                      {hero.img ? (
+                        <Image
+                          src={hero.img}
+                          alt={hero.localized_name}
+                          fill
+                          className="object-cover object-top group-hover:scale-105 transition duration-500"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-zinc-900 flex items-center justify-center text-zinc-600">
+                          No Image
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#14161f] via-transparent to-black/40" />
+
+                      {/* Rank Badge */}
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 backdrop-blur border border-white/10 text-xs font-bold text-amber-300 font-mono">
+                        #{index + 1}
+                      </div>
+
+                      {/* Attribute Badge */}
+                      <div className={`absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur border text-[10px] font-mono uppercase font-bold ${attrColor}`}>
+                        {hero.primary_attr}
+                      </div>
+
+                      {/* Hero Name overlay at bottom of banner */}
+                      <div className="absolute bottom-2 left-3 right-3">
+                        <h3 className="text-base font-bold text-white tracking-wide truncate group-hover:text-red-300 transition">
+                          {hero.localized_name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Stats & Dotabuff Link */}
+                    <div className="p-3.5 space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-zinc-900/80 p-2 rounded-lg border border-zinc-800">
+                          <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">Picks</span>
+                          <span className="font-mono font-bold text-zinc-200">{formattedPicks}</span>
+                        </div>
+                        <div className="bg-zinc-900/80 p-2 rounded-lg border border-zinc-800">
+                          <span className="text-[10px] uppercase tracking-wider text-zinc-500 block">Win Rate</span>
+                          <span className={`font-mono font-bold inline-flex items-center gap-1 ${isHighWinrate ? 'text-emerald-400' : 'text-zinc-400'}`}>
+                            <TrendingUp className="w-3 h-3" />
+                            {hero.winrate}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <a
+                        href={hero.dotabuff_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-1.5 px-3 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+                      >
+                        Dotabuff Profile
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* Patch History Grid */}
@@ -177,7 +292,7 @@ export default async function Home() {
       {/* Footer */}
       <footer className="mt-20 border-t border-zinc-900 bg-[#0b0c10] py-8 text-center text-xs text-zinc-500">
         <p>Aegis Update — Dota 2 is a registered trademark of Valve Corporation.</p>
-        <p className="mt-1 text-zinc-600">Built with Next.js, Tailwind CSS & Supabase.</p>
+        <p className="mt-1 text-zinc-600">Built with Next.js, Tailwind CSS, Supabase & OpenDota / Dotabuff.</p>
       </footer>
     </div>
   );
