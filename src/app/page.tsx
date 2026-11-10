@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/lib/dota';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
@@ -77,7 +78,9 @@ export default async function Home() {
               Fetch the latest Dota 2 updates from Valve and store them permanently into your Supabase database.
             </p>
           </div>
-          <SyncButton />
+          <Suspense fallback={<div className="text-xs text-zinc-500">Checking status...</div>}>
+            <SyncButton />
+          </Suspense>
         </div>
 
         {/* Hero Section: Latest Patch */}

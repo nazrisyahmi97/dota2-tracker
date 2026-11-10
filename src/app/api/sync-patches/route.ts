@@ -1,27 +1,67 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getOfficialPatchList } from '@/lib/dota';
 import { getServiceSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+// 30-minute minimum cooldown between database syncs
+const COOLDOWN_MINUTES = 30;
+
+export async function POST(req: NextRequest) {
   try {
     if (!isSupabaseConfigured()) {
-      return NextResponse.json({
-        success: false,
-        error: 'Supabase credentials are not configured in .env.local yet.',
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Supabase credentials are not configured in .env.local yet.' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Security Check: Admin Secret or Vercel Cron Header
+    const adminSecret = process.env.ADMIN_SYNC_SECRET || 'dota2-admin-secret';
+    const authHeader = req.headers.get('authorization');
+    const secretQuery = req.nextUrl.searchParams.get('secret');
+    const customHeader = req.headers.get('x-admin-secret');
+
+    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const isAdmin = customHeader === adminSecret || secretQuery === adminSecret;
+
+    if (!isAdmin && !isCron) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Admin secret required to trigger sync.' },
+        { status: 401 }
+      );
     }
 
     const supabase = getServiceSupabase();
 
-    // 1. Fetch official patches from Valve
+    // 2. Cooldown Check: Prevent spamming even if secret is known
+    const { data: latestRecords } = await supabase
+      .from('patches')
+      .select('updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (latestRecords && latestRecords.length > 0) {
+      const lastSyncTime = new Date(latestRecords[0].updated_at).getTime();
+      const elapsedMinutes = (Date.now() - lastSyncTime) / (1000 * 60);
+
+      if (elapsedMinutes < COOLDOWN_MINUTES) {
+        const remainingMinutes = Math.ceil(COOLDOWN_MINUTES - elapsedMinutes);
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: `Database is already up to date. Next sync available in ${remainingMinutes} min.`,
+        });
+      }
+    }
+
+    // 3. Fetch official patches from Valve
     const valvePatches = await getOfficialPatchList();
     if (!valvePatches || valvePatches.length === 0) {
       return NextResponse.json({ success: false, message: 'No patches retrieved from Valve API' }, { status: 502 });
     }
 
-    // 2. Prepare records for Supabase upsert (take latest 50 patches)
+    // 4. Prepare records for Supabase upsert (take latest 50 patches)
     const records = valvePatches.slice(0, 50).map((patch) => ({
       id: patch.patch_number,
       patch_number: patch.patch_number,
@@ -32,7 +72,7 @@ export async function POST() {
       updated_at: new Date().toISOString(),
     }));
 
-    // 3. Upsert into Supabase patches table
+    // 5. Upsert into Supabase patches table
     const { data, error } = await supabase
       .from('patches')
       .upsert(records, { onConflict: 'patch_number' })
@@ -54,7 +94,7 @@ export async function POST() {
   }
 }
 
-// GET endpoint to check sync status
+// GET endpoint to check sync status (safe and public)
 export async function GET() {
   try {
     if (!isSupabaseConfigured()) {

@@ -1,14 +1,32 @@
 'use client';
 
-import { useState } from 'react';
-import { Database, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { Database, RefreshCw, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function SyncButton() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminSecret, setAdminSecret] = useState<string>('');
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check if ?admin=SECRET is present in the URL or stored in session
+    const paramSecret = searchParams.get('admin');
+    const storedSecret = typeof window !== 'undefined' ? sessionStorage.getItem('dota_admin_secret') : null;
+
+    if (paramSecret) {
+      setIsAdmin(true);
+      setAdminSecret(paramSecret);
+      sessionStorage.setItem('dota_admin_secret', paramSecret);
+    } else if (storedSecret) {
+      setIsAdmin(true);
+      setAdminSecret(storedSecret);
+    }
+  }, [searchParams]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -16,7 +34,9 @@ export default function SyncButton() {
     setIsError(false);
 
     try {
-      const res = await fetch('/api/sync-patches', { method: 'POST' });
+      const res = await fetch(`/api/sync-patches?secret=${encodeURIComponent(adminSecret)}`, {
+        method: 'POST',
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -24,7 +44,7 @@ export default function SyncButton() {
         router.refresh();
       } else {
         setIsError(true);
-        setStatus(data.error || 'Failed to sync. Make sure Supabase keys are configured in .env.local!');
+        setStatus(data.error || 'Sync failed.');
       }
     } catch {
       setIsError(true);
@@ -34,20 +54,36 @@ export default function SyncButton() {
     }
   };
 
+  // If not admin, show a clean, read-only status badge (No button to spam)
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-zinc-400 bg-zinc-900/60 border border-zinc-800/80 px-3 py-1.5 rounded-lg">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span>Auto-Sync Active (Every 12h)</span>
+      </div>
+    );
+  }
+
+  // Admin Mode unlocked
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-      <button
-        onClick={handleSync}
-        disabled={syncing}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-700/80 text-zinc-200 text-xs font-semibold tracking-wide transition shadow-sm disabled:opacity-50 cursor-pointer"
-      >
-        {syncing ? (
-          <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-400" />
-        ) : (
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-        )}
-        {syncing ? 'Syncing with Supabase...' : 'Sync to Supabase'}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs font-semibold tracking-wide transition shadow-md shadow-red-900/30 disabled:opacity-50 cursor-pointer"
+        >
+          {syncing ? (
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Database className="w-3.5 h-3.5" />
+          )}
+          {syncing ? 'Syncing...' : 'Sync Now (Admin)'}
+        </button>
+        <span className="inline-flex items-center gap-1 text-[11px] text-amber-400/90 font-mono">
+          <ShieldCheck className="w-3.5 h-3.5" /> Admin
+        </span>
+      </div>
 
       {status && (
         <span
