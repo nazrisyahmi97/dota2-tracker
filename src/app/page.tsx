@@ -1,8 +1,36 @@
-import { getOfficialPatchList } from '@/lib/dota';
-import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import { getOfficialPatchList, DotaPatchSummary } from '@/lib/dota';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import SyncButton from '@/components/SyncButton';
+import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database } from 'lucide-react';
 
 export default async function Home() {
-  const patches = await getOfficialPatchList();
+  let patches: DotaPatchSummary[] = [];
+  let source = 'Valve Official Feed';
+
+  // 1. Try to load cached patches from Supabase if configured
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from('patches')
+        .select('patch_number, patch_name, patch_timestamp')
+        .order('patch_timestamp', { ascending: false })
+        .limit(20);
+
+      if (!error && data && data.length > 0) {
+        patches = data;
+        source = 'Supabase PostgreSQL';
+      }
+    } catch {
+      // Fallback gracefully
+    }
+  }
+
+  // 2. Fallback to live Valve feed if DB is empty or unconfigured
+  if (patches.length === 0) {
+    patches = await getOfficialPatchList();
+    source = 'Valve Live Feed';
+  }
+
   const latestPatch = patches[0] || null;
   const recentPatches = patches.slice(1, 13);
 
@@ -22,17 +50,30 @@ export default async function Home() {
               <span className="text-xs text-red-400/80 font-mono block -mt-1">Dota 2 Changelog Tracker</span>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/50 border border-red-800/40 text-red-300 text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live Valve Feed
+          <div className="flex items-center gap-3 text-sm">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs">
+              <Database className="w-3 h-3 text-emerald-400" />
+              Source: <span className="font-semibold text-white">{source}</span>
             </span>
           </div>
         </div>
       </header>
 
       {/* Hero Section: Latest Patch */}
-      <main className="max-w-6xl mx-auto px-4 py-10 space-y-12">
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
+        {/* Supabase Action Bar */}
+        <div className="p-4 rounded-xl border border-zinc-800 bg-[#14161f]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Database className="w-4 h-4 text-emerald-400" /> Database Synchronization
+            </h3>
+            <p className="text-xs text-zinc-400">
+              Fetch the latest Dota 2 updates from Valve and store them permanently into your Supabase database.
+            </p>
+          </div>
+          <SyncButton />
+        </div>
+
         {latestPatch ? (
           <section className="relative overflow-hidden rounded-2xl border border-red-900/40 bg-gradient-to-b from-[#1c1820] to-[#12141a] p-8 shadow-2xl shadow-red-950/20">
             <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
