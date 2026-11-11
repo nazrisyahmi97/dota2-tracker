@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
     const secretQuery = req.nextUrl.searchParams.get('secret');
     const customHeader = req.headers.get('x-admin-secret');
 
-    const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const isCron =
+      (process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`) ||
+      req.headers.get('user-agent')?.includes('vercel-cron');
     const isAdmin = customHeader === adminSecret || secretQuery === adminSecret;
 
     if (!isAdmin && !isCron) {
@@ -94,8 +96,16 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET endpoint to check sync status (safe and public)
-export async function GET() {
+// GET endpoint: runs sync when triggered by Vercel Cron, otherwise returns DB status
+export async function GET(req: NextRequest) {
+  const isCronTrigger =
+    req.headers.get('user-agent')?.includes('vercel-cron') ||
+    (process.env.CRON_SECRET && req.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`);
+
+  if (isCronTrigger) {
+    return POST(req);
+  }
+
   try {
     if (!isSupabaseConfigured()) {
       return NextResponse.json({ connected: false, message: 'Supabase credentials not configured' });

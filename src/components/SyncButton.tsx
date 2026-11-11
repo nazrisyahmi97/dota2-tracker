@@ -59,7 +59,7 @@ export default function SyncButton() {
     return (
       <div className="flex items-center gap-2 text-xs text-zinc-400 bg-zinc-900/60 border border-zinc-800/80 px-3 py-1.5 rounded-lg">
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span>Auto-Sync Active (Every 12h)</span>
+        <span>Auto-Sync Active (Daily)</span>
       </div>
     );
   }
