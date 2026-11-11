@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/lib/dota';
-import { getLatestRedditPosts } from '@/lib/reddit';
+import { getTopWeeklyRedditPosts } from '@/lib/reddit';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
 import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp, MessageSquare, ArrowUpRight } from 'lucide-react';
@@ -36,10 +36,10 @@ export default async function Home() {
     source = 'Valve Live Feed';
   }
 
-  // 3. Fetch top picked heroes & latest r/DotA2 posts concurrently
+  // 3. Fetch top picked heroes & top weekly r/DotA2 posts concurrently
   const [topHeroes, redditPosts] = await Promise.all([
     getTopPickedHeroes(8),
-    getLatestRedditPosts(3),
+    getTopWeeklyRedditPosts(3),
   ]);
 
   const latestPatch = patches[0] || null;
@@ -295,20 +295,20 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* Community Buzz: 3 Latest Posts from r/DotA2 */}
+        {/* Community Buzz: Top 3 Weekly Posts from r/DotA2 */}
         <section className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-orange-500" />
-                Latest from r/DotA2
+                Top r/DotA2 Posts (Past 7 Days)
               </h2>
               <p className="text-xs text-zinc-400 mt-1">
-                Fresh discussions and community posts directly from the Dota 2 subreddit.
+                Most popular community posts and discussions from the past week on r/DotA2.
               </p>
             </div>
             <a
-              href="https://www.reddit.com/r/DotA2/new/"
+              href="https://www.reddit.com/r/DotA2/top/?t=week"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-orange-950/40 hover:bg-orange-900/60 border border-orange-800/40 text-orange-300 hover:text-white transition self-start sm:self-auto"

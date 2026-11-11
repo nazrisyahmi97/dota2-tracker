@@ -30,11 +30,11 @@ function extractAttr(xml: string, tag: string, attr: string): string {
 }
 
 /**
- * Fetch the latest posts from r/DotA2 using Reddit's free official RSS/Atom feed
+ * Fetch the top popular posts from r/DotA2 over the past 7 days using Reddit's free RSS/Atom feed
  */
-export async function getLatestRedditPosts(limit = 3): Promise<RedditPost[]> {
+export async function getTopWeeklyRedditPosts(limit = 3): Promise<RedditPost[]> {
   try {
-    const res = await fetch(`https://www.reddit.com/r/DotA2/new.rss?limit=${limit}`, {
+    const res = await fetch(`https://www.reddit.com/r/DotA2/top.rss?t=week&limit=${limit}`, {
       headers: {
         'User-Agent': 'web:aegis-dota2-tracker:v1.0.0 (by /u/aegis_tracker)',
         Accept: 'application/atom+xml, application/xml, text/xml',
@@ -58,7 +58,7 @@ export async function getLatestRedditPosts(limit = 3): Promise<RedditPost[]> {
       const authorBlock = extractTag(entry, 'author');
       const author = decodeHtmlEntities(extractTag(authorBlock, 'name')) || 'Redditor';
 
-      const link = extractAttr(entry, 'link', 'href') || 'https://www.reddit.com/r/DotA2/new/';
+      const link = extractAttr(entry, 'link', 'href') || 'https://www.reddit.com/r/DotA2/top/?t=week';
       const published = extractTag(entry, 'published') || extractTag(entry, 'updated');
 
       // Extract a clean short excerpt from HTML content if text exists
