@@ -3,6 +3,8 @@ import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/li
 import { getTopWeeklyRedditPosts } from '@/lib/reddit';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
+import EmberBackground from '@/components/EmberBackground';
+import SoundtrackPlayer from '@/components/SoundtrackPlayer';
 import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp, MessageSquare, ArrowUpRight } from 'lucide-react';
 import Image from 'next/image';
 
@@ -46,12 +48,14 @@ export default async function Home() {
   const recentPatches = patches.slice(1, 9);
 
   return (
-    <div className="min-h-screen bg-[#0e1015] text-[#e1e6eb] font-sans">
+    <div className="relative min-h-screen bg-[#0e1015] text-[#e1e6eb] font-sans">
+      <EmberBackground />
+
       {/* Top Navigation */}
-      <header className="border-b border-red-950/40 bg-[#12141c]/80 backdrop-blur sticky top-0 z-50">
+      <header className="border-b border-red-950/40 bg-[#12141c]/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center shadow-lg shadow-red-900/30">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center shadow-lg shadow-red-900/30 hover:scale-105 transition">
               <Flame className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -61,8 +65,9 @@ export default async function Home() {
               <span className="text-xs text-red-400/80 font-mono block -mt-1">Dota 2 Changelog & Meta Tracker</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs">
+          <div className="flex items-center gap-2.5 text-sm">
+            <SoundtrackPlayer />
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs">
               <Database className="w-3 h-3 text-emerald-400" />
               Source: <span className="font-semibold text-white">{source}</span>
             </span>
@@ -71,9 +76,9 @@ export default async function Home() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-12">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 space-y-12">
         {/* Supabase Action Bar */}
-        <div className="p-4 rounded-xl border border-zinc-800 bg-[#14161f]/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="animate-fade-in-up p-4 rounded-xl border border-zinc-800 bg-[#14161f]/80 backdrop-blur-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-0.5">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Database className="w-4 h-4 text-emerald-400" /> Database Synchronization
@@ -89,8 +94,11 @@ export default async function Home() {
 
         {/* Hero Section: Latest Patch */}
         {latestPatch ? (
-          <section className="relative overflow-hidden rounded-2xl border border-red-900/40 bg-gradient-to-b from-[#1c1820] to-[#12141a] p-8 shadow-2xl shadow-red-950/20">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+          <section
+            style={{ animationDelay: '80ms' }}
+            className="animate-fade-in-up relative overflow-hidden rounded-2xl border border-red-900/40 bg-gradient-to-b from-[#1c1820] to-[#12141a] p-8 shadow-2xl shadow-red-950/20 hover:border-red-700/60 transition duration-300"
+          >
+            <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold uppercase tracking-wider">
@@ -172,7 +180,8 @@ export default async function Home() {
                 return (
                   <div
                     key={hero.id}
-                    className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800 bg-[#14161f]/80 hover:border-red-700/60 transition duration-300 shadow-lg"
+                    style={{ animationDelay: `${120 + index * 55}ms` }}
+                    className="animate-fade-in-up group relative flex flex-col justify-between overflow-hidden rounded-xl border border-zinc-800 bg-[#14161f]/80 hover:border-red-700/60 hover:-translate-y-1 hover:shadow-xl hover:shadow-red-950/20 transition duration-300 shadow-lg"
                   >
                     {/* Top Image Banner with Rank Badge */}
                     <div className="relative w-full h-32 bg-zinc-950 overflow-hidden">
@@ -255,7 +264,7 @@ export default async function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {recentPatches.map((patch) => {
+            {recentPatches.map((patch, idx) => {
               const releaseDate = new Date(patch.patch_timestamp * 1000).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
@@ -265,7 +274,8 @@ export default async function Home() {
               return (
                 <div
                   key={patch.patch_number}
-                  className="group relative flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-[#14161f]/60 hover:bg-[#181b26] hover:border-red-900/50 transition duration-200"
+                  style={{ animationDelay: `${200 + idx * 45}ms` }}
+                  className="animate-fade-in-up group relative flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-[#14161f]/60 hover:bg-[#181b26] hover:border-red-900/50 hover:-translate-y-1 transition duration-200"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -320,7 +330,7 @@ export default async function Home() {
 
           {redditPosts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {redditPosts.map((post) => {
+              {redditPosts.map((post, idx) => {
                 const postDate = post.published
                   ? new Date(post.published).toLocaleDateString('en-US', {
                       month: 'short',
@@ -336,7 +346,8 @@ export default async function Home() {
                     href={post.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-[#14161f]/70 hover:bg-[#191c28] hover:border-orange-700/50 transition duration-200"
+                    style={{ animationDelay: `${260 + idx * 60}ms` }}
+                    className="animate-fade-in-up group flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-[#14161f]/70 hover:bg-[#191c28] hover:border-orange-700/50 hover:-translate-y-1 transition duration-200"
                   >
                     <div className="space-y-2.5">
                       <div className="flex items-center justify-between text-[11px] text-zinc-500">
