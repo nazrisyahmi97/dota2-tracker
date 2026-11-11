@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/lib/dota';
 import { getTopWeeklyRedditPosts } from '@/lib/reddit';
+import { getDeveloperSteamProfile } from '@/lib/steam';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
 import EmberBackground from '@/components/EmberBackground';
@@ -38,10 +39,11 @@ export default async function Home() {
     source = 'Valve Live Feed';
   }
 
-  // 3. Fetch top picked heroes & top weekly r/DotA2 posts concurrently
-  const [topHeroes, redditPosts] = await Promise.all([
+  // 3. Fetch top picked heroes, top weekly r/DotA2 posts, and live developer Steam profile concurrently
+  const [topHeroes, redditPosts, devProfile] = await Promise.all([
     getTopPickedHeroes(8),
     getTopWeeklyRedditPosts(3),
+    getDeveloperSteamProfile(),
   ]);
 
   const latestPatch = patches[0] || null;
@@ -395,9 +397,58 @@ export default async function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-zinc-900 bg-[#0b0c10] py-8 text-center text-xs text-zinc-500">
-        <p>Aegis Update — Dota 2 is a registered trademark of Valve Corporation.</p>
-        <p className="mt-1 text-zinc-600">Built with Next.js, Tailwind CSS, Supabase & OpenDota / Dotabuff.</p>
+      <footer className="relative z-10 mt-20 border-t border-zinc-900 bg-[#0b0c10]/90 py-10 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="text-center sm:text-left text-xs text-zinc-500 space-y-1">
+            <p>Aegis Update — Dota 2 is a registered trademark of Valve Corporation.</p>
+            <p className="text-zinc-600">Built with Next.js, Tailwind CSS, Supabase & OpenDota / Dotabuff.</p>
+          </div>
+
+          {/* Live Steam Developer Badge */}
+          <a
+            href={devProfile.profileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-3 px-4 py-2.5 rounded-xl border border-zinc-800 bg-[#14161f]/90 hover:border-red-700/60 hover:bg-[#181b26] transition duration-200 shadow-lg"
+          >
+            <div className="relative">
+              {devProfile.avatarUrl ? (
+                <Image
+                  src={devProfile.avatarUrl}
+                  alt={devProfile.name}
+                  width={36}
+                  height={36}
+                  className="rounded-lg border border-zinc-700 group-hover:border-amber-400/70 transition"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-600 to-amber-600 flex items-center justify-center text-white font-bold text-sm">
+                  {devProfile.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <span
+                title={`Steam status: ${devProfile.onlineState}`}
+                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#14161f] ${
+                  devProfile.onlineState === 'in-game'
+                    ? 'bg-emerald-400'
+                    : devProfile.onlineState === 'online'
+                    ? 'bg-sky-400'
+                    : 'bg-zinc-500'
+                }`}
+              />
+            </div>
+
+            <div className="text-left">
+              <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-mono">
+                Developed by
+              </span>
+              <span className="text-sm font-bold text-white group-hover:text-amber-300 transition inline-flex items-center gap-1.5">
+                {devProfile.name}
+                <ExternalLink className="w-3 h-3 text-zinc-500 group-hover:text-amber-300 transition" />
+              </span>
+            </div>
+          </a>
+        </div>
       </footer>
     </div>
   );
