@@ -1,8 +1,9 @@
 import { Suspense } from 'react';
 import { getOfficialPatchList, getTopPickedHeroes, DotaPatchSummary } from '@/lib/dota';
+import { getLatestRedditPosts } from '@/lib/reddit';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
-import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp } from 'lucide-react';
+import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp, MessageSquare, ArrowUpRight } from 'lucide-react';
 import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
@@ -35,8 +36,11 @@ export default async function Home() {
     source = 'Valve Live Feed';
   }
 
-  // 3. Fetch top picked heroes from current meta (backed by official match data)
-  const topHeroes = await getTopPickedHeroes(8);
+  // 3. Fetch top picked heroes & latest r/DotA2 posts concurrently
+  const [topHeroes, redditPosts] = await Promise.all([
+    getTopPickedHeroes(8),
+    getLatestRedditPosts(3),
+  ]);
 
   const latestPatch = patches[0] || null;
   const recentPatches = patches.slice(1, 9);
@@ -289,6 +293,92 @@ export default async function Home() {
               );
             })}
           </div>
+        </section>
+
+        {/* Community Buzz: 3 Latest Posts from r/DotA2 */}
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-orange-500" />
+                Latest from r/DotA2
+              </h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                Fresh discussions and community posts directly from the Dota 2 subreddit.
+              </p>
+            </div>
+            <a
+              href="https://www.reddit.com/r/DotA2/new/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-orange-950/40 hover:bg-orange-900/60 border border-orange-800/40 text-orange-300 hover:text-white transition self-start sm:self-auto"
+            >
+              See more on r/DotA2
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          {redditPosts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {redditPosts.map((post) => {
+                const postDate = post.published
+                  ? new Date(post.published).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : 'Recent';
+
+                return (
+                  <a
+                    key={post.id || post.link}
+                    href={post.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex flex-col justify-between p-5 rounded-xl border border-zinc-800/80 bg-[#14161f]/70 hover:bg-[#191c28] hover:border-orange-700/50 transition duration-200"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                        <span className="font-mono text-orange-400/90 truncate max-w-[140px]">
+                          {post.author}
+                        </span>
+                        <span>{postDate}</span>
+                      </div>
+                      <h3 className="text-sm font-bold text-zinc-100 group-hover:text-orange-300 transition line-clamp-2 leading-snug">
+                        {post.title}
+                      </h3>
+                      {post.excerpt && (
+                        <p className="text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+                          {post.excerpt}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-4 mt-4 border-t border-zinc-800/60 flex items-center justify-between text-xs font-medium text-orange-400 group-hover:text-orange-300">
+                      <span>Open on Reddit</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-6 rounded-xl border border-zinc-800/80 bg-[#14161f]/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <p className="text-sm text-zinc-400">
+                Reddit posts are temporarily unavailable right now — visit the subreddit directly for the latest discussions.
+              </p>
+              <a
+                href="https://www.reddit.com/r/DotA2/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition shrink-0"
+              >
+                Visit r/DotA2
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
         </section>
       </main>
 
