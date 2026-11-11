@@ -22,7 +22,7 @@ body {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -32,35 +32,48 @@ body {
 
 @keyframes pulseGlow {
   0%, 100% {
-    opacity: 0.35;
+    opacity: 0.45;
     transform: scale(1);
   }
   50% {
-    opacity: 0.65;
-    transform: scale(1.06);
+    opacity: 0.85;
+    transform: scale(1.1);
   }
 }
 
 @keyframes floatEmber {
   0% {
-    transform: translateY(0) translateX(0) scale(1);
+    transform: translateY(10vh) translateX(0) scale(0.8);
     opacity: 0;
   }
-  15% {
-    opacity: 0.8;
+  10% {
+    opacity: 1;
   }
-  85% {
-    opacity: 0.4;
+  50% {
+    transform: translateY(-45vh) translateX(25px) scale(1.1);
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.5;
   }
   100% {
-    transform: translateY(-100vh) translateX(25px) scale(0.4);
+    transform: translateY(-105vh) translateX(-15px) scale(0.4);
     opacity: 0;
+  }
+}
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
   }
 }
 
 @keyframes eqBar {
   0%, 100% {
-    transform: scaleY(0.3);
+    transform: scaleY(0.25);
   }
   50% {
     transform: scaleY(1);
@@ -68,23 +81,29 @@ body {
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeInUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-pulse-glow {
-  animation: pulseGlow 6s ease-in-out infinite;
+  animation: pulseGlow 5s ease-in-out infinite;
 }
 
 .animate-ember {
-  animation: floatEmber linear infinite;
+  animation-name: floatEmber;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.animate-shimmer {
+  animation: shimmerSweep 5s ease-in-out infinite;
 }
 
 .animate-eq-1 {
-  animation: eqBar 0.7s ease-in-out infinite;
+  animation: eqBar 0.65s ease-in-out infinite;
 }
 .animate-eq-2 {
-  animation: eqBar 0.55s ease-in-out 0.15s infinite;
+  animation: eqBar 0.5s ease-in-out 0.15s infinite;
 }
 .animate-eq-3 {
-  animation: eqBar 0.8s ease-in-out 0.3s infinite;
+  animation: eqBar 0.75s ease-in-out 0.3s infinite;
 }

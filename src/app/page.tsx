@@ -99,6 +99,7 @@ export default async function Home() {
             className="animate-fade-in-up relative overflow-hidden rounded-2xl border border-red-900/40 bg-gradient-to-b from-[#1c1820] to-[#12141a] p-8 shadow-2xl shadow-red-950/20 hover:border-red-700/60 transition duration-300"
           >
             <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none animate-pulse-glow" />
+            <div className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-amber-400/5 to-transparent animate-shimmer pointer-events-none" />
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-3">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold uppercase tracking-wider">

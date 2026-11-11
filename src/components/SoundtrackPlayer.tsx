@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Music, Volume2 } from 'lucide-react';
 
 export default function SoundtrackPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasCustomAudio, setHasCustomAudio] = useState<boolean | null>(null);
+  const [hasCustomAudio, setHasCustomAudio] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
-  const nodesRef = useRef<{ stop: () => void } | null>(null);
+  const stopRef = useRef<(() => void) | null>(null);
 
-  // Check once if user placed a custom /audio/dota-theme.mp3 in public/audio/
   useEffect(() => {
     fetch('/audio/dota-theme.mp3', { method: 'HEAD' })
       .then((res) => setHasCustomAudio(res.ok))
@@ -18,9 +17,9 @@ export default function SoundtrackPlayer() {
   }, []);
 
   const stopSynth = useCallback(() => {
-    if (nodesRef.current) {
-      nodesRef.current.stop();
-      nodesRef.current = null;
+    if (stopRef.current) {
+      stopRef.current();
+      stopRef.current = null;
     }
     if (ctxRef.current) {
       ctxRef.current.close().catch(() => {});
@@ -28,44 +27,44 @@ export default function SoundtrackPlayer() {
     }
   }, []);
 
-  // Epic dark-fantasy ambient synth fallback (D minor atmospheric MOBA pad)
+  // Epic cinematic dark-fantasy synth (D minor war-horn brass pad + rhythmic bass pulse)
   const startSynth = useCallback(() => {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new AudioCtx();
     ctxRef.current = ctx;
 
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
-    masterGain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 2.0);
+    masterGain.gain.setValueAtTime(0.01, ctx.currentTime);
+    masterGain.gain.exponentialRampToValueAtTime(0.38, ctx.currentTime + 1.2);
     masterGain.connect(ctx.destination);
 
-    // Lowpass filter for warm orchestral pad feel
+    // Warm sweeping lowpass filter
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(420, ctx.currentTime);
+    filter.frequency.setValueAtTime(850, ctx.currentTime);
+    filter.Q.setValueAtTime(2.5, ctx.currentTime);
     filter.connect(masterGain);
 
-    // Subtle LFO modulating filter frequency
+    // Filter sweep LFO for dramatic rising/falling tension
     const lfo = ctx.createOscillator();
     const lfoGain = ctx.createGain();
-    lfo.frequency.setValueAtTime(0.12, ctx.currentTime);
-    lfoGain.gain.setValueAtTime(160, ctx.currentTime);
+    lfo.frequency.setValueAtTime(0.18, ctx.currentTime);
+    lfoGain.gain.setValueAtTime(420, ctx.currentTime);
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
     lfo.start();
 
-    // Deep D minor chord frequencies (D2, A2, F3, A3, D4)
-    const freqs = [73.42, 110.0, 174.61, 220.0, 293.66];
+    // Rich epic D minor chord (D2, A2, D3, F3, A3, D4)
+    const freqs = [73.42, 110.0, 146.83, 174.61, 220.0, 293.66];
     const oscs: OscillatorNode[] = [];
 
     freqs.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const oscGain = ctx.createGain();
-      osc.type = i < 2 ? 'sawtooth' : 'triangle';
+      osc.type = i < 3 ? 'sawtooth' : 'triangle';
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      // Slight detune for lush chorus texture
-      osc.detune.setValueAtTime((i % 2 === 0 ? 1 : -1) * 4, ctx.currentTime);
-      oscGain.gain.setValueAtTime(i < 2 ? 0.28 : 0.14, ctx.currentTime);
+      osc.detune.setValueAtTime((i % 2 === 0 ? 1 : -1) * 6, ctx.currentTime);
+      oscGain.gain.setValueAtTime(i < 2 ? 0.25 : 0.14, ctx.currentTime);
 
       osc.connect(oscGain);
       oscGain.connect(filter);
@@ -73,17 +72,33 @@ export default function SoundtrackPlayer() {
       oscs.push(osc);
     });
 
-    nodesRef.current = {
-      stop: () => {
-        oscs.forEach((o) => {
-          try {
-            o.stop();
-          } catch {}
-        });
+    // Subtle deep war-drum pulse every 2.4 seconds
+    const drumInterval = window.setInterval(() => {
+      if (ctx.state !== 'running') return;
+      const now = ctx.currentTime;
+      const drumOsc = ctx.createOscillator();
+      const drumGain = ctx.createGain();
+      drumOsc.type = 'sine';
+      drumOsc.frequency.setValueAtTime(95, now);
+      drumOsc.frequency.exponentialRampToValueAtTime(36, now + 0.45);
+      drumGain.gain.setValueAtTime(0.45, now);
+      drumGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      drumOsc.connect(drumGain);
+      drumGain.connect(masterGain);
+      drumOsc.start(now);
+      drumOsc.stop(now + 0.65);
+    }, 2400);
+
+    stopRef.current = () => {
+      window.clearInterval(drumInterval);
+      oscs.forEach((o) => {
         try {
-          lfo.stop();
+          o.stop();
         } catch {}
-      },
+      });
+      try {
+        lfo.stop();
+      } catch {}
     };
   }, []);
 
@@ -99,12 +114,12 @@ export default function SoundtrackPlayer() {
 
     if (hasCustomAudio && audioRef.current) {
       try {
-        audioRef.current.volume = 0.45;
+        audioRef.current.volume = 0.55;
         await audioRef.current.play();
         setIsPlaying(true);
         return;
       } catch {
-        // Fallback to synth if audio fails
+        // Fallback to synth
       }
     }
 
@@ -125,27 +140,27 @@ export default function SoundtrackPlayer() {
       )}
       <button
         onClick={togglePlay}
-        title={isPlaying ? 'Mute Dota Theme' : 'Play Dota Atmospheric Theme'}
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition duration-200 cursor-pointer ${
+        title={isPlaying ? 'Mute Soundtrack' : 'Play Dota Theme Soundtrack'}
+        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition duration-200 cursor-pointer ${
           isPlaying
-            ? 'bg-red-950/60 border-red-600/60 text-red-200 shadow-md shadow-red-900/30'
-            : 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            ? 'bg-gradient-to-r from-red-900/80 to-amber-900/70 border-amber-500/70 text-amber-200 shadow-lg shadow-red-900/40'
+            : 'bg-red-950/50 hover:bg-red-900/60 border-red-700/60 text-red-200 hover:text-white shadow-sm shadow-red-950/30 animate-pulse'
         }`}
       >
         {isPlaying ? (
           <>
-            <Volume2 className="w-3.5 h-3.5 text-red-400" />
-            <span className="hidden sm:inline">Theme On</span>
+            <Volume2 className="w-3.5 h-3.5 text-amber-300" />
+            <span>Theme On</span>
             <span className="flex items-end gap-0.5 h-3 ml-0.5">
-              <span className="w-0.5 h-full bg-red-400 rounded-full animate-eq-1 origin-bottom" />
-              <span className="w-0.5 h-full bg-amber-400 rounded-full animate-eq-2 origin-bottom" />
-              <span className="w-0.5 h-full bg-red-400 rounded-full animate-eq-3 origin-bottom" />
+              <span className="w-0.5 h-full bg-amber-400 rounded-full animate-eq-1 origin-bottom" />
+              <span className="w-0.5 h-full bg-red-400 rounded-full animate-eq-2 origin-bottom" />
+              <span className="w-0.5 h-full bg-amber-300 rounded-full animate-eq-3 origin-bottom" />
             </span>
           </>
         ) : (
           <>
-            <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="hidden sm:inline">Play Theme</span>
+            <Music className="w-3.5 h-3.5 text-amber-400" />
+            <span>Play Theme</span>
           </>
         )}
       </button>
