@@ -33,3 +33,33 @@ ON public.patches
 FOR ALL 
 USING (auth.jwt() ->> 'role' = 'service_role')
 WITH CHECK (auth.jwt() ->> 'role' = 'service_role');
+
+-- 5. Daily Visits Counter Table
+CREATE TABLE IF NOT EXISTS public.daily_visits (
+    visit_date DATE PRIMARY KEY,
+    visit_count INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE public.daily_visits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read access on daily_visits"
+ON public.daily_visits FOR SELECT USING (true);
+
+-- Atomic increment function (uses Malaysia timezone Asia/Kuala_Lumpur)
+CREATE OR REPLACE FUNCTION public.increment_daily_visit()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    new_count INTEGER;
+BEGIN
+    INSERT INTO public.daily_visits (visit_date, visit_count)
+    VALUES ((NOW() AT TIME ZONE 'Asia/Kuala_Lumpur')::DATE, 1)
+    ON CONFLICT (visit_date)
+    DO UPDATE SET visit_count = daily_visits.visit_count + 1
+    RETURNING visit_count INTO new_count;
+
+    RETURN new_count;
+END;
+$$;

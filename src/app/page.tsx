@@ -4,6 +4,7 @@ import { getTopWeeklyRedditPosts } from '@/lib/reddit';
 import { getDeveloperSteamProfile } from '@/lib/steam';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import SyncButton from '@/components/SyncButton';
+import VisitorCounter from '@/components/VisitorCounter';
 import EmberBackground from '@/components/EmberBackground';
 import SoundtrackPlayer from '@/components/SoundtrackPlayer';
 import { Flame, Clock, ExternalLink, ShieldAlert, Sparkles, RefreshCw, Database, Trophy, Swords, TrendingUp, MessageSquare, ArrowUpRight } from 'lucide-react';
@@ -126,9 +127,12 @@ export default async function Home() {
               Fetch the latest Dota 2 updates from Valve and store them permanently into your Supabase database.
             </p>
           </div>
-          <Suspense fallback={<div className="text-xs text-zinc-500">Checking status...</div>}>
-            <SyncButton />
-          </Suspense>
+          <div className="flex flex-wrap items-center gap-3">
+            <VisitorCounter />
+            <Suspense fallback={<div className="text-xs text-zinc-500">Checking status...</div>}>
+              <SyncButton />
+            </Suspense>
+          </div>
         </div>
 
         {/* Hero Section: Latest Patch */}
